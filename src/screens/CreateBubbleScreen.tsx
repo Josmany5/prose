@@ -44,6 +44,41 @@ export const CreateBubbleScreen: React.FC = () => {
   const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
   const [enableNotifications, setEnableNotifications] = useState(false);
 
+  // Type-specific state
+  // Task
+  const [taskItems, setTaskItems] = useState<Array<{ text: string; completed: boolean }>>([]);
+  const [newTaskItem, setNewTaskItem] = useState('');
+
+  // Workout
+  const [exercises, setExercises] = useState<Array<{ name: string; sets: number; reps: number; weight?: number }>>([]);
+  const [newExerciseName, setNewExerciseName] = useState('');
+
+  // Budget
+  const [transactions, setTransactions] = useState<Array<{ amount: number; category: string; type: 'income' | 'expense'; date: Date }>>([]);
+  const [newTransaction, setNewTransaction] = useState({ amount: '', category: '', type: 'expense' as 'income' | 'expense' });
+
+  // Goal
+  const [goalTarget, setGoalTarget] = useState('');
+  const [goalProgress, setGoalProgress] = useState('0');
+
+  // Journal
+  const [journalMood, setJournalMood] = useState<'great' | 'good' | 'okay' | 'bad' | 'awful' | undefined>();
+
+  // Library/Reading
+  const [bookAuthor, setBookAuthor] = useState('');
+  const [readingStatus, setReadingStatus] = useState<'want-to-read' | 'reading' | 'finished'>('want-to-read');
+  const [bookRating, setBookRating] = useState<1 | 2 | 3 | 4 | 5 | undefined>();
+
+  // Ideas
+  const [ideaItems, setIdeaItems] = useState<Array<{ text: string; status: 'raw' | 'developing' | 'implemented' }>>([]);
+  const [newIdeaItem, setNewIdeaItem] = useState('');
+
+  // Meeting
+  const [attendees, setAttendees] = useState<string[]>([]);
+  const [newAttendee, setNewAttendee] = useState('');
+  const [agendaItems, setAgendaItems] = useState<string[]>([]);
+  const [newAgendaItem, setNewAgendaItem] = useState('');
+
   const bubbleTypes: BubbleType['type'][] = [
     'note',
     'task',
@@ -77,6 +112,53 @@ export const CreateBubbleScreen: React.FC = () => {
       urgency: urgency,
       importance: importance,
     };
+
+    // Add type-specific data
+    if (selectedType === 'task' && taskItems.length > 0) {
+      bubbleData.typeData = {
+        steps: taskItems.map(item => ({
+          description: item.text,
+          isCompleted: item.completed,
+        })),
+        isCompleted: taskItems.every(item => item.completed),
+      };
+    } else if (selectedType === 'workout' && exercises.length > 0) {
+      bubbleData.typeData = {
+        exercises: exercises.map(ex => ({
+          name: ex.name,
+          sets: ex.sets,
+          reps: ex.reps,
+          weight: ex.weight,
+        })),
+      };
+    } else if (selectedType === 'goal') {
+      bubbleData.typeData = {
+        target: goalTarget,
+        progress: parseInt(goalProgress) || 0,
+      };
+    } else if (selectedType === 'journal') {
+      bubbleData.typeData = {
+        entries: content ? [{ content, mood: journalMood, date: new Date() }] : [],
+      };
+    } else if (selectedType === 'library') {
+      bubbleData.typeData = {
+        author: bookAuthor,
+        status: readingStatus,
+        rating: bookRating,
+      };
+    } else if (selectedType === 'ideas' && ideaItems.length > 0) {
+      bubbleData.typeData = {
+        ideas: ideaItems.map(item => ({
+          text: item.text,
+          status: item.status,
+        })),
+      };
+    } else if (selectedType === 'meeting') {
+      bubbleData.typeData = {
+        attendees,
+        agendaItems,
+      };
+    }
 
     // Add schedule if enabled
     if (hasSchedule) {
@@ -195,6 +277,307 @@ export const CreateBubbleScreen: React.FC = () => {
           numberOfLines={6}
           textAlignVertical="top"
         />
+
+        {/* Type-Specific Fields */}
+        {selectedType === 'task' && (
+          <View style={styles.typeSpecificSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Task Items</Text>
+            <View style={styles.addItemRow}>
+              <TextInput
+                style={[styles.addItemInput, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+                value={newTaskItem}
+                onChangeText={setNewTaskItem}
+                placeholder="Add task item..."
+                placeholderTextColor={colors.textSecondary}
+                onSubmitEditing={() => {
+                  if (newTaskItem.trim()) {
+                    setTaskItems([...taskItems, { text: newTaskItem.trim(), completed: false }]);
+                    setNewTaskItem('');
+                  }
+                }}
+              />
+              <TouchableOpacity
+                style={[styles.addButton, { backgroundColor: colors.accent }]}
+                onPress={() => {
+                  if (newTaskItem.trim()) {
+                    setTaskItems([...taskItems, { text: newTaskItem.trim(), completed: false }]);
+                    setNewTaskItem('');
+                  }
+                }}
+              >
+                <Text style={styles.addButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+            {taskItems.map((item, index) => (
+              <View key={index} style={[styles.listItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <TouchableOpacity onPress={() => {
+                  const updated = [...taskItems];
+                  updated[index].completed = !updated[index].completed;
+                  setTaskItems(updated);
+                }}>
+                  <Text style={styles.checkbox}>{item.completed ? '✅' : '⬜'}</Text>
+                </TouchableOpacity>
+                <Text style={[styles.listItemText, { color: colors.text, textDecorationLine: item.completed ? 'line-through' : 'none' }]}>
+                  {item.text}
+                </Text>
+                <TouchableOpacity onPress={() => setTaskItems(taskItems.filter((_, i) => i !== index))}>
+                  <Text style={styles.deleteIcon}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {selectedType === 'workout' && (
+          <View style={styles.typeSpecificSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Exercises</Text>
+            <View style={styles.addItemRow}>
+              <TextInput
+                style={[styles.addItemInput, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+                value={newExerciseName}
+                onChangeText={setNewExerciseName}
+                placeholder="Exercise name..."
+                placeholderTextColor={colors.textSecondary}
+              />
+              <TouchableOpacity
+                style={[styles.addButton, { backgroundColor: colors.accent }]}
+                onPress={() => {
+                  if (newExerciseName.trim()) {
+                    setExercises([...exercises, { name: newExerciseName.trim(), sets: 3, reps: 10 }]);
+                    setNewExerciseName('');
+                  }
+                }}
+              >
+                <Text style={styles.addButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+            {exercises.map((exercise, index) => (
+              <View key={index} style={[styles.exerciseItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.exerciseName, { color: colors.text }]}>{exercise.name}</Text>
+                <View style={styles.exerciseDetails}>
+                  <Text style={[styles.exerciseDetailText, { color: colors.textSecondary }]}>
+                    {exercise.sets} sets × {exercise.reps} reps
+                  </Text>
+                  <TouchableOpacity onPress={() => setExercises(exercises.filter((_, i) => i !== index))}>
+                    <Text style={styles.deleteIcon}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {selectedType === 'goal' && (
+          <View style={styles.typeSpecificSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Goal Details</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+              value={goalTarget}
+              onChangeText={setGoalTarget}
+              placeholder="Target (e.g., Run 5km, Save $10,000)..."
+              placeholderTextColor={colors.textSecondary}
+            />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Progress (%)</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+              value={goalProgress}
+              onChangeText={(text) => {
+                const num = parseInt(text) || 0;
+                setGoalProgress(Math.min(100, Math.max(0, num)).toString());
+              }}
+              placeholder="0-100"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric"
+            />
+          </View>
+        )}
+
+        {selectedType === 'journal' && (
+          <View style={styles.typeSpecificSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Mood</Text>
+            <View style={styles.moodRow}>
+              {[
+                { mood: 'great', emoji: '😄' },
+                { mood: 'good', emoji: '🙂' },
+                { mood: 'okay', emoji: '😐' },
+                { mood: 'bad', emoji: '😞' },
+                { mood: 'awful', emoji: '😢' },
+              ].map(({ mood, emoji }) => (
+                <TouchableOpacity
+                  key={mood}
+                  style={[
+                    styles.moodButton,
+                    { backgroundColor: journalMood === mood ? colors.accent : colors.surface, borderColor: colors.border },
+                  ]}
+                  onPress={() => setJournalMood(mood as any)}
+                >
+                  <Text style={styles.moodEmoji}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {selectedType === 'library' && (
+          <View style={styles.typeSpecificSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Author</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+              value={bookAuthor}
+              onChangeText={setBookAuthor}
+              placeholder="Author name..."
+              placeholderTextColor={colors.textSecondary}
+            />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Status</Text>
+            <View style={styles.statusRow}>
+              {[
+                { status: 'want-to-read', label: 'Want to Read' },
+                { status: 'reading', label: 'Reading' },
+                { status: 'finished', label: 'Finished' },
+              ].map(({ status, label }) => (
+                <TouchableOpacity
+                  key={status}
+                  style={[
+                    styles.statusButton,
+                    { backgroundColor: readingStatus === status ? colors.accent : colors.surface, borderColor: colors.border },
+                  ]}
+                  onPress={() => setReadingStatus(status as any)}
+                >
+                  <Text style={[styles.statusButtonText, { color: readingStatus === status ? '#FFFFFF' : colors.text }]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Rating</Text>
+            <View style={styles.selectorRow}>
+              {[1, 2, 3, 4, 5].map((level) => (
+                <TouchableOpacity key={level} onPress={() => setBookRating(level as any)}>
+                  <Text style={styles.ratingStar}>{bookRating && bookRating >= level ? '⭐' : '☆'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {selectedType === 'ideas' && (
+          <View style={styles.typeSpecificSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Ideas</Text>
+            <View style={styles.addItemRow}>
+              <TextInput
+                style={[styles.addItemInput, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+                value={newIdeaItem}
+                onChangeText={setNewIdeaItem}
+                placeholder="New idea..."
+                placeholderTextColor={colors.textSecondary}
+                onSubmitEditing={() => {
+                  if (newIdeaItem.trim()) {
+                    setIdeaItems([...ideaItems, { text: newIdeaItem.trim(), status: 'raw' }]);
+                    setNewIdeaItem('');
+                  }
+                }}
+              />
+              <TouchableOpacity
+                style={[styles.addButton, { backgroundColor: colors.accent }]}
+                onPress={() => {
+                  if (newIdeaItem.trim()) {
+                    setIdeaItems([...ideaItems, { text: newIdeaItem.trim(), status: 'raw' }]);
+                    setNewIdeaItem('');
+                  }
+                }}
+              >
+                <Text style={styles.addButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+            {ideaItems.map((item, index) => (
+              <View key={index} style={[styles.ideaItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.listItemText, { color: colors.text }]}>{item.text}</Text>
+                <View style={styles.ideaActions}>
+                  <Text style={[styles.ideaStatus, { color: colors.textSecondary }]}>{item.status}</Text>
+                  <TouchableOpacity onPress={() => setIdeaItems(ideaItems.filter((_, i) => i !== index))}>
+                    <Text style={styles.deleteIcon}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {selectedType === 'meeting' && (
+          <View style={styles.typeSpecificSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Attendees</Text>
+            <View style={styles.addItemRow}>
+              <TextInput
+                style={[styles.addItemInput, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+                value={newAttendee}
+                onChangeText={setNewAttendee}
+                placeholder="Add attendee..."
+                placeholderTextColor={colors.textSecondary}
+                onSubmitEditing={() => {
+                  if (newAttendee.trim()) {
+                    setAttendees([...attendees, newAttendee.trim()]);
+                    setNewAttendee('');
+                  }
+                }}
+              />
+              <TouchableOpacity
+                style={[styles.addButton, { backgroundColor: colors.accent }]}
+                onPress={() => {
+                  if (newAttendee.trim()) {
+                    setAttendees([...attendees, newAttendee.trim()]);
+                    setNewAttendee('');
+                  }
+                }}
+              >
+                <Text style={styles.addButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+            {attendees.map((attendee, index) => (
+              <View key={index} style={[styles.chipItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.chipText, { color: colors.text }]}>{attendee}</Text>
+                <TouchableOpacity onPress={() => setAttendees(attendees.filter((_, i) => i !== index))}>
+                  <Text style={styles.deleteIcon}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Agenda</Text>
+            <View style={styles.addItemRow}>
+              <TextInput
+                style={[styles.addItemInput, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+                value={newAgendaItem}
+                onChangeText={setNewAgendaItem}
+                placeholder="Agenda item..."
+                placeholderTextColor={colors.textSecondary}
+                onSubmitEditing={() => {
+                  if (newAgendaItem.trim()) {
+                    setAgendaItems([...agendaItems, newAgendaItem.trim()]);
+                    setNewAgendaItem('');
+                  }
+                }}
+              />
+              <TouchableOpacity
+                style={[styles.addButton, { backgroundColor: colors.accent }]}
+                onPress={() => {
+                  if (newAgendaItem.trim()) {
+                    setAgendaItems([...agendaItems, newAgendaItem.trim()]);
+                    setNewAgendaItem('');
+                  }
+                }}
+              >
+                <Text style={styles.addButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+            {agendaItems.map((item, index) => (
+              <View key={index} style={[styles.listItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.listItemText, { color: colors.text }]}>{item}</Text>
+                <TouchableOpacity onPress={() => setAgendaItems(agendaItems.filter((_, i) => i !== index))}>
+                  <Text style={styles.deleteIcon}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Urgency Selector */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Urgency</Text>
@@ -512,5 +895,155 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: SPACING.md,
+  },
+  // Type-specific styles
+  typeSpecificSection: {
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  addItemRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  addItemInput: {
+    flex: 1,
+    ...FONTS.regular,
+    fontSize: FONT_SIZES.body,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: SPACING.sm,
+  },
+  addButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    ...FONTS.bold,
+    fontSize: 24,
+    color: '#FFFFFF',
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    padding: SPACING.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: SPACING.xs,
+  },
+  listItemText: {
+    flex: 1,
+    ...FONTS.regular,
+    fontSize: FONT_SIZES.body,
+  },
+  checkbox: {
+    fontSize: 20,
+  },
+  deleteIcon: {
+    fontSize: 18,
+    color: '#FF3B30',
+    fontWeight: 'bold',
+  },
+  exerciseItem: {
+    padding: SPACING.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: SPACING.xs,
+  },
+  exerciseName: {
+    ...FONTS.medium,
+    fontSize: FONT_SIZES.body,
+    marginBottom: SPACING.xs,
+  },
+  exerciseDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  exerciseDetailText: {
+    ...FONTS.regular,
+    fontSize: FONT_SIZES.small,
+  },
+  input: {
+    ...FONTS.regular,
+    fontSize: FONT_SIZES.body,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  moodRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  moodButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moodEmoji: {
+    fontSize: 28,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  statusButton: {
+    flex: 1,
+    paddingVertical: SPACING.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  statusButtonText: {
+    ...FONTS.medium,
+    fontSize: FONT_SIZES.tiny,
+  },
+  ratingStar: {
+    fontSize: 32,
+  },
+  ideaItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: SPACING.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: SPACING.xs,
+  },
+  ideaActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  ideaStatus: {
+    ...FONTS.regular,
+    fontSize: FONT_SIZES.tiny,
+    fontStyle: 'italic',
+  },
+  chipItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    padding: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginRight: SPACING.xs,
+    marginBottom: SPACING.xs,
+    alignSelf: 'flex-start',
+  },
+  chipText: {
+    ...FONTS.regular,
+    fontSize: FONT_SIZES.small,
   },
 });
