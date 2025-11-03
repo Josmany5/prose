@@ -196,16 +196,23 @@ export const useStore = create<NotesState>((set, get) => ({
 
   deleteNote: async (id: string) => {
     try {
+      console.log('🗑️ Deleting note with ID:', id);
       const database = await getDb();
+      console.log('✅ Database instance obtained');
       await database.deleteNote(id);
+      console.log('✅ Note deleted from database');
       await get().loadNotes();
+      console.log('✅ Notes reloaded');
 
       // Clear current note if it was deleted
       if (get().currentNote?.id === id) {
         set({ currentNote: null });
+        console.log('✅ Current note cleared');
       }
+
+      console.log('✅ Delete operation completed successfully');
     } catch (error) {
-      console.error('Failed to delete note:', error);
+      console.error('❌ Failed to delete note:', error);
       throw error;
     }
   },
