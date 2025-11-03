@@ -196,7 +196,8 @@ export const useStore = create<NotesState>((set, get) => ({
 
   deleteNote: async (id: string) => {
     try {
-      await db.deleteNote(id);
+      const database = await getDb();
+      await database.deleteNote(id);
       await get().loadNotes();
 
       // Clear current note if it was deleted
